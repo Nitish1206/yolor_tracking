@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/yolo_custom
+yolo_custom.pt
+videos

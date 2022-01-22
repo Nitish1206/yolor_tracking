@@ -32,5 +32,5 @@ pip install -r requirements.txt
 
 **RUN**
 ```
-python detect_yolor.py --agnostic-nms --device=0 --source test_video/FisheriesTrailerCarparkSouth_out.mkv 
+python detect_yolor.py --agnostic-nms --device=0 --source N:\Projects\yolor_tracking\videos\test3.mp4
 ```

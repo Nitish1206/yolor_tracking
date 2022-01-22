@@ -284,6 +284,7 @@ class LoadWebcam:  # for inference
 
 class LoadStreams:  # multiple IP or RTSP cameras
     def __init__(self, sources='streams.txt', img_size=640):
+        print("init stream...")
         self.mode = 'stream'
         self.img_size = img_size
 
@@ -315,7 +316,8 @@ class LoadStreams:  # multiple IP or RTSP cameras
         self.rect = np.unique(s, axis=0).shape[0] == 1  # rect inference if all shapes equal
         if not self.rect:
             print('WARNING: Different stream shapes detected. For optimal performance supply similarly-shaped streams.')
-
+        print(self.rect)
+        # exit()
     def update(self, index, cap):
         # Read next stream frame in a daemon thread
         n = 0
