@@ -1,6 +1,7 @@
 import math
 from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
+# from shapely.geometry.polygon import Polygon
+from car_utils.geometry_orientation import is_inside_polygon
 
 def get_distance(point1, point2, axis):
         if axis == "x":
@@ -19,9 +20,9 @@ def near_parking(startX, startY, endX, endY, parking_point):
     dist_xy = get_distance(parking_point, car_center, "xy")
     return dist_xy, car_center
 
-def if_is_inside(xs,ys, car_point,pflag):
-    x_shrink = 0.7
-    y_shrink = 0.3
+def if_is_inside(xs,ys, car_point):
+    x_shrink = 0.1
+    y_shrink = 0.1
     x_center = 0.5 * min(xs) + 0.5 * max(xs)
     y_center = 0.5 * min(ys) + 0.5 * max(ys)
     # shrink figure
@@ -31,9 +32,10 @@ def if_is_inside(xs,ys, car_point,pflag):
     # create list of new coordinates
     new_coords = [(x,y) for x,y in zip(new_xs,new_ys) ]
 
-    point = Point(car_point)
-    polygon = Polygon(new_coords)
-    status=polygon.contains(point)
+    # point = Point(car_point)
+    # polygon = Polygon(new_coords)
+    # status=polygon.contains(point)
+    status=is_inside_polygon(new_coords,car_point)
 
     return status,new_coords
     

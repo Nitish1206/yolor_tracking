@@ -3,6 +3,7 @@ import cv2
 class parking_rects:
     def __init__(self) -> None:
         self.park_rect=[]
+        self.frame=None
 
     def click_event(self,event, x, y, flags, params):
     
@@ -13,16 +14,16 @@ class parking_rects:
             self.park_rect.append([x,y])
            
     def get_coordinate(self):
-        frame=cv2.imread(r"N:\Projects\yolor_tracking\videos\image.jpg")
+        self.frame=cv2.imread(r"N:\Projects\yolor_tracking\videos\image.jpg")
         cv2.namedWindow('image')
         cv2.setMouseCallback('image', self.click_event)
-        cv2.imshow('image', frame)
+        cv2.imshow('image', self.frame)
         print("rect points==",self.park_rect)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     
     def return_area(self):
-        return self.park_rect
+        return self.park_rect,self.frame
 
 
 
