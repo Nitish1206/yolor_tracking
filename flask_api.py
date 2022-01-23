@@ -35,20 +35,29 @@ def get_data():
     car_tracker_obj.main()
 
 @app.route("/stop_process")
-def stop_processes():
+def stop_process():
     car_tracker_obj.stop_main_process()
+    return "200"
 
+@app.route("/data_recieved")
+# @cross_origin(supports_credentials = True)
+def reset_server_parameter():
+    car_tracker_obj.reset_server_parameters()
+    return "ok"
 
-@app.route("/progess")
-@cross_origin(supports_credentials = True)
-def send_data():
+@app.route("/get_progress")
+# @cross_origin(supports_credentials = True)
+def send_progress():
     data={"percent": car_tracker_obj.progress}
+    # print("data===",data)
     return json.dumps(data,default=default)
 
-@app.route("/")
+@app.route("/final_data",methods=["POST"])
 @cross_origin(supports_credentials = True)
 def send_data():
-    data={"data": "parking_id_data"}
+
+    data=car_tracker_obj.data_to_send
+    print("data",data)
     return json.dumps(data,default=default)
 
 if __name__ == '__main__' :

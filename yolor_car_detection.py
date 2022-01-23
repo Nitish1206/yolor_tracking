@@ -63,32 +63,34 @@ class car_tracker():
         desired_colors : list = [tuple(np.array(colorsys.hsv_to_rgb(hue,1,1))[::-1]*255) 
                                         for hue in np.arange(0, 1, 1/len(self.desired_classes))]
         self.colors[self.desired_classes] = desired_colors
-        self.ct = CentroidTracker()
 
-        self.set_values_from_server()
+        self.set_parking_variable()
+        self.reset_server_parameters()
+        # self.set_values_from_server()
        
     
     def set_values_from_server(self,source=r"N:\Projects\yolor_tracking\videos\test3.mp4",parking_dict={},server_flag=False):
 
-        self.source= source #', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
-
-        self.frame_queue = Queue(maxsize=1)      
-        self.current_car_rects=[]
-        self.current_centroid=[]
-        self.parkng_rect_obj=parking_rects()
-        self.processing_flag=True
+        self.reset_server_parameters()
         self.processing_thread = Thread(target=self.process_frame)
         self.processing_thread.start()
-        self.parking_rects=[]
-        self.server=False
-        self.parking_objects={}
-        self.parking_dicts={}
-        self.tracking_rects=[]
-        self.dlibtrackers={}
         self.create_parking_objects(parking_dict,server_flag)
-        self.set_parking_variable()
-        self.mainprocess_flag=True
-        self.progress=0
+        self.source= source #', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
+
+    def reset_server_parameters(self):
+        self.frame_queue = Queue(maxsize=1)
+        self.current_car_rects = []
+        self.current_centroid = []
+        self.parkng_rect_obj = parking_rects()
+        self.processing_flag = True
+        self.parking_rects = []
+        self.parking_objects = {}
+        self.parking_dicts = {}
+        self.tracking_rects = []
+        self.dlibtrackers = {}
+        self.mainprocess_flag = True
+        self.progress = 0
+        self.data_to_send = {}
 
     def set_parking_variable(self):
         self.checkout_buffer=10  #secs
@@ -119,7 +121,6 @@ class car_tracker():
             parking_centre=(sum(parking_obj.xs)//4,sum(parking_obj.ys)//4)
             parking_obj.centroid=parking_centre
             self.parking_objects[park_ids]=parking_obj
-
 
     def main(self):
         
@@ -207,6 +208,7 @@ class car_tracker():
                         if parkings.park_in_buffer > self.park_buffer_threshold:
                             parkings.park_in_status=True
                             parkings.park_in_buffer=0
+                            parkings.park_in_time.append(current_frame_time)
                             # cv2.circle(frame, tuple(parkings.centroid), 3, (0,255,25) , -1)
 
                     if not park_status:
@@ -214,6 +216,8 @@ class car_tracker():
                         if parkings.park_out_buffer>self.park_buffer_threshold:
                             parkings.parking_status=False
                             parkings.park_out_buffer=0
+                            parkings.park_out_time.append(current_frame_time)
+
                             del self.dlibtrackers[parkings.id]
                 
                 if parkings.park_in_status:
@@ -228,14 +232,21 @@ class car_tracker():
                 break
         
         self.processing_flag=False
-        
         cap.release()
         cv2.destroyAllWindows()
+        self.process_result()
 
     def stop_main_process(self):
         self.mainprocess_flag=False
 
-    
+    def process_result(self):
+        self.data_to_send["message"]={}
+        for parkings in self.parking_objects.items():
+            self.data_to_send["message"][parkings.id]={}
+            self.data_to_send["message"][parkings.id]["parking_pos"]=parkings.rects
+            park_in_out=[[in_,out_] for in_,out_ in zip(parkings.park_in_time,parkings.park_out_time)]
+            self.data_to_send["message"][parkings.id]["park_in_out_time"]=park_in_out
+
     @torch.no_grad()
     def detect_car_rect(self,frame):
 

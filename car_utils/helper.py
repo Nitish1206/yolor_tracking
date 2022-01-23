@@ -1,5 +1,5 @@
 import math
-from shapely.geometry import Point
+# from shapely.geometry import Point
 # from shapely.geometry.polygon import Polygon
 from car_utils.geometry_orientation import is_inside_polygon
 

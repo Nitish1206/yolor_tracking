@@ -10,6 +10,7 @@ class Parking:
         self.occupied_center=None
         self.park_in_buffer=0
         self.park_out_buffer=0
-
+        self.park_in_time=[]
+        self.park_out_time=[]
         self.xs=[]
         self.ys=[]
