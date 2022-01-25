@@ -22,10 +22,7 @@ from car_utils.helper import *
 from car_utils.parkings import Parking
 from centroidtracker import CentroidTracker
 import dlib
-
-cuda.select_device(0)
-cuda.close()
-cuda.select_device(0)
+import csv
 
 
 class car_tracker():
@@ -91,12 +88,12 @@ class car_tracker():
         self.mainprocess_flag = True
         self.progress = 0
         self.data_to_send = {}
+        self.park_in_buffer_=0
 
     def set_parking_variable(self):
         self.checkout_buffer=10  #secs
-        self.park_buffer_threshold=5
+        self.park_buffer_threshold=30
         self.park_raw_buffer_threshold=5
-    
 
     def load_classes(self,path):
         # Loads *.names file at 'path'
@@ -114,7 +111,7 @@ class car_tracker():
         for park_ids in parking_dict.keys():
             parking_obj=Parking()
             parking_obj.id=park_ids
-            rects=self.parking_dicts[park_ids]
+            rects=parking_dict[park_ids]
             parking_obj.rects=rects
             parking_obj.xs=[x[0] for x in rects]
             parking_obj.ys=[x[1] for x in rects]
@@ -154,28 +151,34 @@ class car_tracker():
                 updated_rects=[]
 
                 parkings=self.parking_objects[key]
-                print("parkings---",parkings)
-                rect=parkings.rects
+                # print("parkings---",parkings)
                 xs=parkings.xs
                 ys=parkings.ys
-                print("key",parkings.parking_status)
+                # print("key",parkings.parking_status)
                 # parking_centre=(sum(xs)//4,sum(ys)//4)
+                pts = np.array([parkings.rects],np.int32)
+                pts = pts.reshape((-1, 1, 2))
+                isClosed = True
+                # Blue color in BGR
+                color = (255, 0, 0)
+                thickness = 2
+                cv2.polylines(frame, [pts], isClosed, color, thickness)  
+                for k,centr in enumerate(self.current_centroid):
+                        cv2.circle(frame, tuple(centr), 3, (255,0,255) , -1)
+
 
                 if not parkings.parking_status:
                     cv2.circle(frame, tuple(parkings.centroid), 3, (0,0,255) , -1)
-                    pts = np.array([parkings.rects],np.int32)
-                    pts = pts.reshape((-1, 1, 2))
-                    isClosed = True
-                    # Blue color in BGR
-                    color = (255, 0, 0)
-                    thickness = 2
-                    cv2.polylines(frame, [pts], isClosed, color, thickness)  
-                    
                     for k,centr in enumerate(self.current_centroid):
-                        cv2.circle(frame, tuple(centr), 3, (255,0,255) , -1)
+                        # cv2.circle(frame, tuple(centr), 3, (255,0,255) , -1)
 
                         park_status,coords = if_is_inside(xs,ys,centr)
                         if park_status:
+                            cv2.circle(frame, tuple(centr), 5, (125,0,255) , -1)
+                            cv2.circle(frame, tuple(parkings.centroid), 5, (125,0,255) , -1)
+                            cv2.imshow("debug frame",frame)
+                            cv2.waitKey(0)
+                            cv2.destroyWindow("debug frame")
                             current_car_rect=self.current_car_rects[k]
                             print("current car rect",len(current_car_rect))
                             # parkings.rects=current_car_rect
@@ -185,11 +188,12 @@ class car_tracker():
                             t.start_track(rgb_frame, dlib_rect)
                             self.dlibtrackers[parkings.id]=t
                             parkings.parking_status=True
-                            parkings.occupied_center=centr
+                            # parkings.occupied_center=centr
+                            break
                          
                 elif parkings.parking_status:
                     
-                    # parkings.park_in_buffer=0
+                    parkings.park_in_buffer=0
                     t=self.dlibtrackers[parkings.id]
                     t.update(rgb_frame)
                     pos = t.get_position()
@@ -198,13 +202,16 @@ class car_tracker():
                     startY = int(pos.top())
                     endX = int(pos.right())
                     endY = int(pos.bottom())
-                    updated_rects.append([startX,startY,endX,endY])
+                    cv2.rectangle(frame,(startX,startY),(endX,endY),(255,0,0),3)
+                    # updated_rects.append([startX,startY,endX,endY])
                     centroid=((startX+endX)//2,endY)
-                    # cv2.circle(frame, tuple(centroid), 3, (0,255,25) , -1)
+                    
 
                     park_status,coords = if_is_inside(xs,ys,centroid)
                     if park_status and not parkings.park_in_status:
                         parkings.park_in_buffer+=1
+                        # self.park_in_buffer_+=1
+                        print(str(parkings.id)+" ===== "+str(parkings.park_in_buffer))
                         if parkings.park_in_buffer > self.park_buffer_threshold:
                             parkings.park_in_status=True
                             parkings.park_in_buffer=0
@@ -213,18 +220,22 @@ class car_tracker():
 
                     if not park_status:
                         parkings.park_out_buffer+=1
+                        print(str(parkings.id)+" pout===== "+str(parkings.park_out_buffer))
                         if parkings.park_out_buffer>self.park_buffer_threshold:
                             parkings.parking_status=False
+                            parkings.park_in_status=False
+
                             parkings.park_out_buffer=0
                             parkings.park_out_time.append(current_frame_time)
 
                             del self.dlibtrackers[parkings.id]
                 
-                if parkings.park_in_status:
+                if parkings.parking_status and not parkings.park_in_status:
+                    cv2.circle(frame, tuple(parkings.centroid), 3, (255,55,125) , -1)
+                elif parkings.park_in_status:
+                    cv2.circle(frame, tuple(parkings.centroid), 3, (0,255,0) , -1)
 
-                    cv2.circle(frame, tuple(parkings.centroid), 3, (0,255,25) , -1)
-
-                if not parkings.parking_status:
+                elif not parkings.parking_status:
                     cv2.circle(frame, tuple(parkings.centroid), 3, (0,25,255) , -1)
 
             cv2.imshow("frame",frame)
@@ -241,11 +252,48 @@ class car_tracker():
 
     def process_result(self):
         self.data_to_send["message"]={}
-        for parkings in self.parking_objects.items():
-            self.data_to_send["message"][parkings.id]={}
-            self.data_to_send["message"][parkings.id]["parking_pos"]=parkings.rects
-            park_in_out=[[in_,out_] for in_,out_ in zip(parkings.park_in_time,parkings.park_out_time)]
-            self.data_to_send["message"][parkings.id]["park_in_out_time"]=park_in_out
+        print("*"*100)
+        print(self.parking_objects)
+        print(self.parking_objects.items())
+        print("*"*100)
+        rows_=[]
+        for key_ in self.parking_objects.keys():
+            raw_rows=[]
+            parkings_=self.parking_objects[key_]
+            self.data_to_send["message"][parkings_.id]={}
+            self.data_to_send["message"][parkings_.id]["parking_pos"]=parkings_.rects
+            self.data_to_send["message"][parkings_.id]["id"]=parkings_.id
+            self.data_to_send["message"][parkings_.id]["Number_plate"]=""
+            print("in time",parkings_.park_in_time)
+            print("out time",parkings_.park_out_time)
+            park_in_out=[[int(in_),int(out_)] for in_,out_ in zip(parkings_.park_in_time,parkings_.park_out_time)]
+            self.data_to_send["message"][parkings_.id]["park_in_out_time"]=park_in_out
+            raw_rows.append(parkings_.id)
+            raw_rows.append(",".join(park_in_out))
+            # raw_rows.append(",".join(parkings_.park_out_time))
+            rows_.append(raw_rows)
+
+        # field_names = ["parking id","In_time","Out_time"]
+        self.write_to_csv(rows_)
+        print("*"*100)
+        print(self.data_to_send)
+        print("*"*100)
+
+    def write_to_csv(self,rows_):
+
+        fields=["parking id","in out time "]
+        filename = "output/parking_record.csv"
+    
+        # writing to csv file 
+        with open(filename, 'w') as csvfile: 
+            # creating a csv writer object 
+            csvwriter = csv.writer(csvfile) 
+                
+            # writing the fields 
+            csvwriter.writerow(fields) 
+                
+            # writing the data rows 
+            csvwriter.writerows(rows_)
 
     @torch.no_grad()
     def detect_car_rect(self,frame):
@@ -301,9 +349,21 @@ class car_tracker():
 
 # with torch.no_grad():
 if __name__ == '__main__' :
-    car_tracker_obj=car_tracker()
-    print(car_tracker_obj)
-    car_tracker_obj.set_values_from_server()
-    car_tracker_obj.main()
+    cuda.select_device(0)
+    # t = torch.cuda.get_device_properties(0).total_memory
+    # r = torch.cuda.memory_reserved(0)
+    # a = torch.cuda.memory_allocated(0)
+    # f = r-a
+    # print(f)
+    # exit() 
 
-    torch.cuda.empty_cache()
+    # torch.cuda.empty()
+    with torch.no_grad():
+    # torch.cuda.empty_cache()
+
+        car_tracker_obj=car_tracker()
+        print(car_tracker_obj)
+        car_tracker_obj.set_values_from_server()
+        car_tracker_obj.main()
+
+        torch.cuda.empty_cache()

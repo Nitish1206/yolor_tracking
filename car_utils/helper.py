@@ -30,7 +30,7 @@ def if_is_inside(xs,ys, car_point):
     new_ys = [int((i - y_center) * (1 - y_shrink) + y_center) for i in ys]
 
     # create list of new coordinates
-    new_coords = [(x,y) for x,y in zip(new_xs,new_ys) ]
+    new_coords = [(x,y) for x,y in zip(xs,ys) ]
 
     # point = Point(car_point)
     # polygon = Polygon(new_coords)
