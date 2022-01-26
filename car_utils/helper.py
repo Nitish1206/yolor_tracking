@@ -1,6 +1,6 @@
 import math
-# from shapely.geometry import Point
-# from shapely.geometry.polygon import Polygon
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 from car_utils.geometry_orientation import is_inside_polygon
 
 def get_distance(point1, point2, axis):
@@ -20,7 +20,7 @@ def near_parking(startX, startY, endX, endY, parking_point):
     dist_xy = get_distance(parking_point, car_center, "xy")
     return dist_xy, car_center
 
-def if_is_inside(xs,ys, car_point):
+def if_is_inside(xs,ys, car_point,cords):
     x_shrink = 0.1
     y_shrink = 0.1
     x_center = 0.5 * min(xs) + 0.5 * max(xs)
@@ -30,12 +30,12 @@ def if_is_inside(xs,ys, car_point):
     new_ys = [int((i - y_center) * (1 - y_shrink) + y_center) for i in ys]
 
     # create list of new coordinates
-    new_coords = [(x,y) for x,y in zip(xs,ys) ]
+    new_coords = [(x,y) for x,y in zip(new_xs,new_ys) ]
 
-    # point = Point(car_point)
-    # polygon = Polygon(new_coords)
-    # status=polygon.contains(point)
-    status=is_inside_polygon(new_coords,car_point)
+    point = Point(car_point)
+    polygon = Polygon(new_coords)
+    status=polygon.contains(point)
+    # status=is_inside_polygon(cords,car_point)
 
     return status,new_coords
     
@@ -43,6 +43,19 @@ def if_is_inside(xs,ys, car_point):
     #     return True ,new_coords
     # else:
     #     return False ,new_coords
+
+# def get_direction():
+
+# def find_inside_using_slope(parking_obj,point):
+#     v1 = (x2-x1, y2-y1)   # Vector 1
+#     v2 = (x2-xA, y2-yA)   # Vector 2
+#     xp = v1[0]*v2[1] - v1[1]*v2[0]  # Cross product
+#     if xp > 0:
+#         print('on one side')
+#     elif xp < 0:
+#         print('on the other')
+#     else:
+#         print('on the same line!')
 
 
 

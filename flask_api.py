@@ -6,7 +6,7 @@ import urllib.request
 import requests
 import json
 from yolor_car_detection import car_tracker
-
+from threading import Thread
 
 app = Flask(__name__)
 CORS(app, support_credentials=True)
@@ -32,7 +32,10 @@ def get_data():
     camera_url = data_['camera_url']
     urllib.request.urlretrieve(camera_url, 'video_name.mp4')
     car_tracker_obj.set_values_from_server(source='video_name.mp4',parking_dict=parkings_from_server,server_flag=True)
-    car_tracker_obj.main()
+    # car_tracker_obj.main()
+    t1= Thread(target=car_tracker_obj.main)
+    t1.start()
+    return "success"
 
 @app.route("/stop_process")
 def stop_process():

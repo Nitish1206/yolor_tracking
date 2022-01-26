@@ -88,7 +88,7 @@ class car_tracker():
         self.mainprocess_flag = True
         self.progress = 0
         self.data_to_send = {}
-        self.park_in_buffer_=0
+        self.car_rect_centr=[]
 
     def set_parking_variable(self):
         self.checkout_buffer=10  #secs
@@ -117,6 +117,17 @@ class car_tracker():
             parking_obj.ys=[x[1] for x in rects]
             parking_centre=(sum(parking_obj.xs)//4,sum(parking_obj.ys)//4)
             parking_obj.centroid=parking_centre
+
+            max_xs=max(parking_obj.xs)
+            min_xs=min(parking_obj.xs)
+            max_ys=max(parking_obj.ys)
+            min_ys=min(parking_obj.ys)
+
+            parking_obj.top_line=[(min_xs,min_ys),(max_xs,min_ys)]
+            parking_obj.bottom_line=[(min_xs,max_ys),(max_xs,max_ys)]
+            parking_obj.left_line=[(min_xs,min_ys),(min_xs,max_ys)]
+            parking_obj.right_line=[(max_xs,min_ys),(max_xs,max_ys)]
+
             self.parking_objects[park_ids]=parking_obj
 
     def main(self):
@@ -163,23 +174,24 @@ class car_tracker():
                 color = (255, 0, 0)
                 thickness = 2
                 cv2.polylines(frame, [pts], isClosed, color, thickness)  
-                for k,centr in enumerate(self.current_centroid):
-                        cv2.circle(frame, tuple(centr), 3, (255,0,255) , -1)
+                for k,rectcentr in enumerate(self.car_rect_centr):
+                    centr=rectcentr[0]
+                    cv2.circle(frame, tuple(centr), 3, (255,0,255) , -1)
 
 
                 if not parkings.parking_status:
                     cv2.circle(frame, tuple(parkings.centroid), 3, (0,0,255) , -1)
-                    for k,centr in enumerate(self.current_centroid):
+                    for k,rectcentr in enumerate(self.car_rect_centr):
                         # cv2.circle(frame, tuple(centr), 3, (255,0,255) , -1)
 
-                        park_status,coords = if_is_inside(xs,ys,centr)
+                        park_status,coords = if_is_inside(xs,ys,rectcentr[0],parkings.rects)
                         if park_status:
-                            cv2.circle(frame, tuple(centr), 5, (125,0,255) , -1)
-                            cv2.circle(frame, tuple(parkings.centroid), 5, (125,0,255) , -1)
-                            cv2.imshow("debug frame",frame)
-                            cv2.waitKey(0)
-                            cv2.destroyWindow("debug frame")
-                            current_car_rect=self.current_car_rects[k]
+                            # cv2.circle(frame, tuple(rectcentr[0]), 5, (125,0,255) , -1)
+                            # cv2.circle(frame, tuple(parkings.centroid), 5, (125,0,255) , -1)
+                            # cv2.imshow("debug frame",frame)
+                            # cv2.waitKey(0)
+                            # cv2.destroyWindow("debug frame")
+                            current_car_rect=rectcentr[1]
                             print("current car rect",len(current_car_rect))
                             # parkings.rects=current_car_rect
                             # self.tracking_rects.append(current_car_rect)
@@ -202,17 +214,17 @@ class car_tracker():
                     startY = int(pos.top())
                     endX = int(pos.right())
                     endY = int(pos.bottom())
-                    cv2.rectangle(frame,(startX,startY),(endX,endY),(255,0,0),3)
+                    # cv2.rectangle(frame,(startX,startY),(endX,endY),(255,0,0),3)
                     # updated_rects.append([startX,startY,endX,endY])
                     centroid=((startX+endX)//2,endY)
                     
 
-                    park_status,coords = if_is_inside(xs,ys,centroid)
+                    park_status,coords = if_is_inside(xs,ys,centroid,parkings.rects)
                     if park_status and not parkings.park_in_status:
-                        parkings.park_in_buffer+=1
+                        parkings.park_in_buffer_+=1
                         # self.park_in_buffer_+=1
-                        print(str(parkings.id)+" ===== "+str(parkings.park_in_buffer))
-                        if parkings.park_in_buffer > self.park_buffer_threshold:
+                        print(str(parkings.id)+" ===== "+str(parkings.park_in_buffer_))
+                        if parkings.park_in_buffer_ > self.park_buffer_threshold:
                             parkings.park_in_status=True
                             parkings.park_in_buffer=0
                             parkings.park_in_time.append(current_frame_time)
@@ -224,7 +236,6 @@ class car_tracker():
                         if parkings.park_out_buffer>self.park_buffer_threshold:
                             parkings.parking_status=False
                             parkings.park_in_status=False
-
                             parkings.park_out_buffer=0
                             parkings.park_out_time.append(current_frame_time)
 
@@ -269,7 +280,7 @@ class car_tracker():
             park_in_out=[[int(in_),int(out_)] for in_,out_ in zip(parkings_.park_in_time,parkings_.park_out_time)]
             self.data_to_send["message"][parkings_.id]["park_in_out_time"]=park_in_out
             raw_rows.append(parkings_.id)
-            raw_rows.append(",".join(park_in_out))
+            raw_rows.append(park_in_out)
             # raw_rows.append(",".join(parkings_.park_out_time))
             rows_.append(raw_rows)
 
@@ -317,8 +328,8 @@ class car_tracker():
 
         # Apply NMS
         pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, classes=self.desired_classes, agnostic=self.agnostic_nms)
-        self.current_car_rects=[]
-        self.current_centroid=[]
+       
+        self.car_rect_centr=[]
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             det : torch.Tensor
@@ -337,8 +348,9 @@ class car_tracker():
                 
                 c1=(int(xyxy[0])+int(xyxy[2]))//2
                 c2=int(xyxy[3])
-                self.current_car_rects.append(r1)
-                self.current_centroid.append([c1,c2])
+                centr=[c1,c2]
+                self.car_rect_centr.append([centr,r1])
+               
 
     def process_frame(self):
         while self.processing_flag:
