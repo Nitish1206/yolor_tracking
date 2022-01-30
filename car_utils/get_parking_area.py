@@ -1,4 +1,8 @@
 import cv2
+import os
+
+from torch import imag
+
 
 class parking_rects:
     def __init__(self) -> None:
@@ -14,7 +18,12 @@ class parking_rects:
             self.park_rect.append([x,y])
            
     def get_coordinate(self):
-        self.frame=cv2.imread(r"N:\Projects\yolor_tracking\videos\image.jpg")
+        image_directory=r"N:\Projects\yolor_tracking\videos\images"
+        # image_name="ion_alarm.jpg"
+        # image_name="Hikvision.jpg"
+        image_name="image.jpg"
+        image_path=os.path.join(image_directory,image_name)
+        self.frame=cv2.imread(image_path)
         cv2.namedWindow('image')
         cv2.setMouseCallback('image', self.click_event)
         cv2.imshow('image', self.frame)
