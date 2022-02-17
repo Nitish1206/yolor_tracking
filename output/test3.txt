@@ -1,0 +1,2 @@
+parking id 1 is occupied by car 1163231 at 44 seconds
+parking id 1 car 1163231 left the parking 67 seconds

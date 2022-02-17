@@ -1,0 +1,1 @@
+parked id 1 is occupied by car at 373 seconds

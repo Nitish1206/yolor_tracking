@@ -20,6 +20,7 @@ from queue import Queue
 from car_utils.get_parking_area import parking_rects
 from car_utils.helper import *
 from car_utils.parkings import Parking
+from car_utils.get_license_number import get_result_api
 from centroidtracker import CentroidTracker
 import dlib
 import csv
@@ -127,7 +128,6 @@ class car_tracker():
             parking_obj.bottom_line=[(min_xs,max_ys),(max_xs,max_ys)]
             parking_obj.left_line=[(min_xs,min_ys),(min_xs,max_ys)]
             parking_obj.right_line=[(max_xs,min_ys),(max_xs,max_ys)]
-
             self.parking_objects[park_ids]=parking_obj
 
     def main(self):
@@ -149,7 +149,6 @@ class car_tracker():
 
             if not ret :
                 break
-            # frame = cv2.resize(frame,(video_width,video_height))
             
             frameId = int(round(cap.get(1)))
             self.progress=(frameId/length)*100
@@ -164,7 +163,6 @@ class car_tracker():
             for key in self.parking_objects.keys():
                 
                 updated_rects=[]
-
                 parkings=self.parking_objects[key]
                 
                 xs=parkings.xs
@@ -187,19 +185,17 @@ class car_tracker():
 
                         park_status,coords = if_is_inside(xs,ys,rectcentr[0],parkings.rects)
                         if park_status:
-                            
                             current_car_rect=rectcentr[1]
-                            
                             t = dlib.correlation_tracker()
                             dlib_rect = dlib.rectangle(current_car_rect[0], current_car_rect[1], current_car_rect[2], current_car_rect[3])
                             t.start_track(rgb_frame, dlib_rect)
-                            self.dlibtrackers[parkings.id]=t
-                            parkings.parking_status=True
+                            self.dlibtrackers[parkings.id] = t
+                            parkings.parking_status= True
                             break
                          
                 elif parkings.parking_status:
                     
-                    parkings.park_in_buffer=0
+                    parkings.park_in_buffer = 0
                     t=self.dlibtrackers[parkings.id]
                     t.update(rgb_frame)
                     pos = t.get_position()
@@ -215,21 +211,29 @@ class car_tracker():
                     if park_status and not parkings.park_in_status:
                         parkings.park_in_buffer_+=1
                         if parkings.park_in_buffer_ > self.park_buffer_threshold:
+                            license_image = frame[startY:endY,startX:endX]
+                            license_number = get_result_api(license_image)
+                            if license_number !=None:
+                                number_plate = license_number
+                            else:
+                                number_plate = "XYZ"
+                            
+                            car_number = number_plate
+                            parkings.car_number.append(car_number)
+                            
                             parkings.park_in_status=True
                             parkings.park_in_buffer=0
                             parkings.park_in_time.append(current_frame_time)
-                            self.print_strings+="parking id "+str(parkings.id)+" is occupied by car at " + str(current_frame_time) + " seconds"+"\n"  
-
+                            self.print_strings+="parking id "+str(parkings.id)+" is occupied by car "+ str(car_number) +" at " + str(current_frame_time) + " seconds"+"\n"  
 
                     if not park_status:
                         parkings.park_out_buffer+=1
                         if parkings.park_out_buffer>self.park_buffer_threshold:
-                            parkings.parking_status=False
-                            parkings.park_in_status=False
-                            parkings.park_out_buffer=0
+                            parkings.parking_status = False
+                            parkings.park_in_status = False
+                            parkings.park_out_buffer = 0
                             parkings.park_out_time.append(current_frame_time)
-                            self.print_strings+="parking id "+str(parkings.id)+" car left the parking " + str(current_frame_time) +" seconds"+ "\n"  
-
+                            self.print_strings+="parking id "+str(parkings.id)+" car "+str(parkings.car_number[-1]) +" left the parking " + str(current_frame_time) +" seconds"+ "\n"  
                             del self.dlibtrackers[parkings.id]
                 
                 if parkings.parking_status and not parkings.park_in_status:
@@ -284,11 +288,8 @@ class car_tracker():
         im0s=img0.copy()
         
         img = letterbox(img0, new_shape=self.img_size,auto_size=self.auto_size)[0]
-
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-
         img = np.ascontiguousarray(img)
-
         img = torch.from_numpy(img).to(self.device)
         img = img.half() if self.half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -330,6 +331,7 @@ class car_tracker():
                 self.detect_car_rect(small_frame)
 
 if __name__ == '__main__' :
+
     cuda.select_device(0)
     
     video_dir=r"N:\Projects\yolor_tracking\videos"
@@ -344,5 +346,4 @@ if __name__ == '__main__' :
         print(car_tracker_obj)
         car_tracker_obj.set_values_from_server(source=video_path)
         car_tracker_obj.main()
-
         torch.cuda.empty_cache()

@@ -130,3 +130,7 @@ dmypy.json
 /yolo_custom
 yolo_custom.pt
 videos
+dist
+build
+*.spec
+

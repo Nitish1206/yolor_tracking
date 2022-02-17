@@ -1,0 +1,6 @@
+parking id 2 is occupied by car at 4 seconds
+parking id 1 is occupied by car at 4 seconds
+parking id 3 is occupied by car at 4 seconds
+parking id 4 is occupied by car at 4 seconds
+parking id 3 car left the parking 19 seconds
+parking id 2 car left the parking 60 seconds

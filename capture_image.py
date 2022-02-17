@@ -1,11 +1,13 @@
 import cv2
 
-video_path=r"N:\Projects\yolor_tracking\videos\ion_alarm.mkv"
+video_name="test10"
+video_path=r"N:\Projects\yolor_tracking\videos\college\\"+video_name+".mp4"
 
 
 video=cv2.VideoCapture(video_path)
+frame_size=(1080,720)
 video_height=720
-video_width=int(720*1.77)
+video_width=1080
 while True:
     ret,image=video.read()
 
@@ -19,7 +21,7 @@ while True:
     if key==ord("q"):
         break
     elif key==ord("w"):
-        cv2.imwrite("image2.jpg",image)
+        cv2.imwrite(video_name+".jpg",image)
 
 
 video.release()

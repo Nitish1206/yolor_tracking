@@ -1,0 +1,6 @@
+park id 2 is occupied by car at 4.4
+park id 3 is occupied by car at 4.4
+park id 1 is occupied by car at 4.5
+park id 4 is occupied by car at 4.5
+park id 4 car left the parking 19.2
+park id 3 car left the parking 60.5
