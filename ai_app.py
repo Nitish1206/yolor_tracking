@@ -1,7 +1,7 @@
 from application.windows import roi_window,video_player,processing_window
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QImage, QPixmap,QColor
-from PyQt5.QtWidgets import QApplication, QMainWindow,QFileDialog,QTableWidgetItem,QComboBox
+from PyQt5.QtWidgets import QApplication, QMainWindow,QFileDialog,QTableWidgetItem,QComboBox,QSizePolicy,QLabel
 from PyQt5 import QtWidgets
 import sys
 import cv2
@@ -16,7 +16,8 @@ from yolor_car_detection_qthread import car_tracker
 from glob import glob
 import traceback
 import json 
-
+from utils.torch_utils import select_device, load_classifier, time_synchronized
+from load_model import LoadModel
 cwd=os.getcwd()
 
 def random_with_N_digits(n):
@@ -32,10 +33,7 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
         self.setFixedWidth(1780)
         self.setFixedHeight(900)
         self.frame_size=(1080,720)
-        with torch.no_grad():
-
-            self.car_tracker_object=car_tracker()
-
+        
         self.all_parkings={"parking id":[],"parking cordindate":[],"parking type":[]}
         self.parking_data={}
         self.car_data={}
@@ -52,7 +50,9 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
         self.videoprocessing.clicked.connect(self.open_processing_window)
         self.preconfigured.clicked.connect(self.check_if_user_selectected_precofiguration)
         self.save_config.clicked.connect(self.save_configuration)
-
+        with torch.no_grad():
+            self.model_obj=LoadModel()
+    
     def check_if_user_selectected_precofiguration(self):
         if self.preconfigured.isChecked():
             precofig=True
@@ -172,18 +172,19 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
                     item=str(item)
                     self.Parking_type_table_view.setItem(row, col, QTableWidgetItem(item))
 
+        self.Parking_type_table_view.horizontalHeader().setStretchLastSection(True)
         self.Parking_type_table_view.resizeColumnsToContents()
         self.Parking_type_table_view.resizeRowsToContents()
     
 
     def parking_type_drop_down(self):
         combobox=QComboBox()
-        combobox.addItems(["Premium","Residential","villa"])
+        combobox.addItems(["Red Zone","Yellow Zone","Residential","villa","Disabled","Premium","Standard"])
         return combobox
     
     def permit_type_drop_down(self):
         combobox=QComboBox()
-        combobox.addItems(["Premium","Residential","villa"])
+        combobox.addItems(["Red Zone","Yellow Zone","Residential","villa","Disabled","Premium","Standard"])
         return combobox
     
     def save_parkings(self):
@@ -234,6 +235,8 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
                 else:
                     item=str(item)
                     self.car_properites.setItem(row, col, QTableWidgetItem(item))
+        
+        self.car_properites.horizontalHeader().setStretchLastSection(True)
 
         self.car_properites.resizeColumnsToContents()
         self.car_properites.resizeRowsToContents()
@@ -257,12 +260,11 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
         self.processing_ui.setupUi(self.Form)
         self.Form.setFixedWidth(1780)
         self.Form.setFixedHeight(900)
+        self.processing_ui.comboBox.addItems(["8 AM to 9 PM", "9 PM to 8 AM"])
+        self.processing_ui.comboBox_2.addItems(["offday", "workday"])
         self.processing_ui.uploadvideo.clicked.connect(self.upload_video)
-        # self.uploadvideo.clicked.connect(self.upload_video)
         self.processing_ui.start_processing.clicked.connect(self.start_processing_)
-        # self.start_processing.clicked.connect(self.start_processing_)
         self.processing_ui.stop_processing.clicked.connect(self.stop_processing_)
-        # self.stop_processing.clicked.connect(self.stop_processing_)
 
         self.Form.show()
 
@@ -285,11 +287,22 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
         self.processing_ui.progressBar.setProperty("value", value_)
 
     def start_processing_(self):
+        # with torch.no_grad():
+
+        self.car_tracker_object=car_tracker(self.model_obj)
+
         self.car_tracker_object.set_values_from_server(source=self.video_path_,parking_dict=self.parking_data,
         car_data=self.car_data,pui=self.processing_ui)
         
         self.car_tracker_object.start()
-        self.parking_detail={"ID":list(self.parking_data.keys()),"Status":["Empty","Empty","Empty"],"Time stamp":["","",""],"Event":["","",""]}
+        parking_type_list=[]
+        for pt in list(self.parking_data.values()):
+            parking_type_list.append(pt.parking_type)
+
+        data_length=len(parking_type_list)
+
+        self.parking_detail={"ID":list(self.parking_data.keys()),"parking Type":parking_type_list,
+        "Status":["Empty"]*data_length,"In Time":[""]*data_length,"Out Time":[""]*data_length,"Event":[""]*data_length}
         # self.car_tracker_object.image_signal.connect(self.updateFrame)
         row_count = (len(self.parking_detail["ID"]))
         column_count = (len(self.parking_detail.keys()))
@@ -297,6 +310,7 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
         self.processing_ui.detail_table.setColumnCount(column_count) 
         self.processing_ui.detail_table.setRowCount(row_count)
         self.processing_ui.detail_table.setHorizontalHeaderLabels(list(self.parking_detail.keys()))
+        self.processing_ui.detail_table.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Fixed)
 
         for row in range(len(self.parking_detail["ID"])):  # add items from array to QTableWidget
             for col,column in enumerate(self.parking_detail.keys()):
@@ -304,24 +318,27 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
                 item = (self.parking_detail[column][row])
                 item=str(item)
                 self.processing_ui.detail_table.setItem(row, col, QTableWidgetItem(item))
-
+                
+        self.processing_ui.detail_table.horizontalHeader().setStretchLastSection(True)
+        
         self.processing_ui.detail_table.resizeColumnsToContents()
         self.processing_ui.detail_table.resizeRowsToContents()
         self.car_tracker_object.progress_signal.connect(self.update_progress_bar)
         self.car_tracker_object.parking_status_signal.connect(self.update_detail_table)
         
-    
     def update_detail_table(self,event_data):
         self.parking_detail["Status"]=[]
         for parking in self.parking_data.values():
             parking_status="Occupied" if parking.park_in_status else "Empty" 
             self.parking_detail["Status"].append(parking_status)
-            
+       
         event_key=list(event_data.keys())[0]
+        event_data_=event_data[event_key]["event"]
+        length = len(event_data_.split('\n'))
       
-        self.parking_detail["Event"][event_key-1]+= event_data[event_key]["event"] + "\n"
-        self.parking_detail["Time stamp"][event_key-1]+= event_data[event_key]["ts"] + "\n"
-        
+        self.parking_detail["Event"][event_key-1]+=event_data_ + "\n"
+        self.parking_detail["In Time"][event_key-1]+= event_data[event_key]["ts_in"] + "\n"*length
+        self.parking_detail["Out Time"][event_key-1]+= event_data[event_key]["ts_out"] + "\n"*length
 
         for row in range(len(self.parking_detail["ID"])):  # add items from array to QTableWidget
             for col,column in enumerate(self.parking_detail.keys()):
@@ -329,20 +346,19 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
                 item = (self.parking_detail[column][row])
                 item=str(item)
                 self.processing_ui.detail_table.setItem(row, col, QTableWidgetItem(item))
-
+        
+        self.processing_ui.detail_table.horizontalHeader().setStretchLastSection(True)
+        self.processing_ui.detail_table.setWordWrap(True)
         self.processing_ui.detail_table.resizeColumnsToContents()
         self.processing_ui.detail_table.resizeRowsToContents()
+        # self.processing_ui.detail_table.
+
 
 def main():
     app = QApplication(sys.argv)
     win = Window()
     win.show()
     sys.exit(app.exec_())
-
-    # try:
-    #     sys.exit(app.exec_())
-    # except SystemExit:
-    #     print("Closing Application ...")
 
 if __name__ == '__main__':
     main()

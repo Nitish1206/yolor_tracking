@@ -1,7 +1,7 @@
 import cv2
 
-video_name="test10"
-video_path=r"N:\Projects\yolor_tracking\videos\college\\"+video_name+".mp4"
+video_name="test3"
+video_path=r"N:\Projects\yolor_tracking\videos\\"+video_name+".mp4"
 
 
 video=cv2.VideoCapture(video_path)

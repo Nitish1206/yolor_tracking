@@ -8,3 +8,5 @@ class car():
         self.time_duration_in = None
         self.permit_type=None
         self.number=None
+        self.current_parking_type=None
+        self.previous_parking_type=None

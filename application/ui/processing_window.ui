@@ -19,11 +19,14 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout" stretch="1,4,1,0">
        <item>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="1" column="0">
-          <widget class="QLabel" name="day_selector">
+        <layout class="QGridLayout" name="gridLayout" columnstretch="1,1,1,1,0" columnminimumwidth="1,1,1,1,1">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetNoConstraint</enum>
+         </property>
+         <item row="1" column="2">
+          <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>select day type</string>
+            <string>Minute</string>
            </property>
           </widget>
          </item>
@@ -39,6 +42,26 @@
          </item>
          <item row="0" column="1">
           <widget class="QComboBox" name="comboBox"/>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Hour</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="day_selector">
+           <property name="text">
+            <string>select day type</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QLineEdit" name="hour_incrementor"/>
+         </item>
+         <item row="1" column="3">
+          <widget class="QLineEdit" name="minute_incrementor"/>
          </item>
         </layout>
        </item>
@@ -94,8 +117,17 @@
      </item>
      <item>
       <widget class="QTableWidget" name="detail_table">
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOff</enum>
+       </property>
        <property name="sizeAdjustPolicy">
         <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="autoScroll">
+        <bool>false</bool>
        </property>
        <property name="wordWrap">
         <bool>false</bool>
