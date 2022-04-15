@@ -32,6 +32,8 @@ from PyQt5.QtGui import QImage, QPixmap,QColor
 from PyQt5.QtCore import pyqtSlot, Qt
 import datetime
 from constants import *
+from car_utils.cars import Car
+import random
 
 class car_tracker(QThread):
 
@@ -45,6 +47,7 @@ class car_tracker(QThread):
         self.set_parking_variable()
         self.ai_=model_obj
         self.car_object_status={}
+        
         
     def set_values_from_server(self,source=r"N:\Projects\yolor_tracking\videos\test3.mp4",parking_dict={},car_data={},pui=None,server_flag=False):
 
@@ -100,23 +103,24 @@ class car_tracker(QThread):
         
         video_height = 720
         video_width = 1080
+        wmultiplier_factor=w/video_width
+        hmultiplier_factor=h/video_height
+
         self.print_strings=""
         # counter=0
         consts=0 if self.ui.comboBox.currentText().split(" ")[1] == "AM" else 12
-        print(consts)
-        print("N"*50)
-        time.sleep(2)
+        # time.sleep(2)
         user_time=(consts+int(self.ui.comboBox.currentText().split(" ")[0]))*3600
         self.user_day = self.ui.comboBox_2.currentText()
 
         while self.mainprocess_flag:
 
-            ret, frame = cap.read()
+            ret, image_ = cap.read()
 
             if not ret :
                 break
-
-            frame=cv2.resize(frame,(video_width,video_height))
+            frame=cv2.resize(image_,(video_width,video_height))
+            
             frameId = int(round(cap.get(1)))
             self.progress = (frameId/length)*100
             self.current_frame_time_unit = user_time + int(frameId/fps)
@@ -139,8 +143,8 @@ class car_tracker(QThread):
                 
                 updated_rects=[]
                 parkings=self.parking_objects[key]
-                xs=parkings.xs
-                ys=parkings.ys
+                xs = parkings.xs
+                ys = parkings.ys
                
                 pts = np.array([parkings.rects],np.int32)
                 pts = pts.reshape((-1, 1, 2))
@@ -197,14 +201,17 @@ class car_tracker(QThread):
                         parkings.park_in_buffer_+=1
                         if parkings.park_in_buffer_ > self.park_buffer_threshold:
                             try:
-                                current_car=self.car_objects[parkings.id]
-                                # car_image = frame[startY:endY, startX:endX]
-                                # number_plate = get_result_api(car_image)
-
-                                parkings.car_id=current_car.id
-                                car_number=current_car.number
-
-                                parkings.car_number.append(car_number)
+                                car_image = image_[int(startY*hmultiplier_factor):int(endY*hmultiplier_factor), int(startX*wmultiplier_factor):int(endX*wmultiplier_factor)]
+                                car_number_ = get_result_api(car_image)
+                                
+                                current_car=Car()
+                                current_car.parking_id = parkings.id
+                                current_car.number = car_number_
+                                permit_type_=random.choice(PERMIT_TYPES)
+                                current_car.permit_type=permit_type_
+                                self.car_object_status[car_number_]=current_car
+                                parkings.car_id=car_number_
+                                parkings.car_number.append(car_number_)
                                 parkings.park_in_status = True
                                 parkings.park_in_buffer = 0
                                 parkings.park_in_time.append(self.current_frame_time_unit)
@@ -212,18 +219,18 @@ class car_tracker(QThread):
                                 ptype=parkings.parking_type
                                 current_car.current_parking_type=ptype
                                 
-                                event_str="car license plate "+str(car_number) +" entered parking "+str(parkings.id) + "\n"+ "parking is "+str(ptype) +"\n"
+                                event_str="car license plate "+str(car_number_) +" entered parking "+str(parkings.id) + "\n"+ "parking is "+str(ptype) +"\n"
 
                                 if ptype =="Red Zone":
-                                    event_str+=self.check_condition_for_rny_parking(parking_type=ptype,lp=car_number)
+                                    event_str+=self.check_condition_for_rny_parking(parking_type=ptype,lp=car_number_)
                                 elif ptype == "Yellow Zone":
-                                    event_str+=self.check_condition_for_rny_parking(parking_type=ptype,lp=car_number)
+                                    event_str+=self.check_condition_for_rny_parking(parking_type=ptype,lp=car_number_)
                                 elif ptype =="Residential":
-                                    event_str+=self.check_conditions_for_residential_parking(parking_type=ptype,permit_type=str(current_car.permit_type),lp=car_number)
+                                    event_str+=self.check_conditions_for_residential_parking(parking_type=ptype,permit_type=str(current_car.permit_type),lp=car_number_)
                                 elif ptype == "villa":
-                                    event_str+=self.check_condition_for_villa_parking(parking_type=ptype,permit_type=str(current_car.permit_type),lp=car_number)
+                                    event_str+=self.check_condition_for_villa_parking(parking_type=ptype,permit_type=str(current_car.permit_type),lp=car_number_)
                                 elif ptype =="Disabled":
-                                    event_str += self.check_condition_for_disabled_parking(parking_type=ptype,permit_type=str(current_car.permit_type),lp=car_number)
+                                    event_str += self.check_condition_for_disabled_parking(parking_type=ptype,permit_type=str(current_car.permit_type),lp=car_number_)
                                 elif ptype == "Premium":
                                     event_str += self.check_condition_for_standard_premium(car_obj=current_car)
                                 elif ptype == "Standard":
@@ -245,9 +252,9 @@ class car_tracker(QThread):
                                 parkings.park_out_buffer = 0
                                 parkings.park_out_time.append(self.current_frame_time_unit)
                                 if parkings.car_id !=None:
-                                    car=self.car_objects[parkings.car_id]
-                                    car_number = car.number
-                                    car.previous_parking_type=car.current_parking_type
+                                    car_=self.car_object_status[parkings.car_id]
+                                    car_number = car_.number
+                                    car_.previous_parking_type=car_.current_parking_type
                                     # self.print_strings+="parking id "+str(parkings.id)+" car "+str(parkings.car_number[-1]) +" left the parking " + str(current_frame_time) +" seconds"+ "\n"  
                                     data_to_emit=data_to_emit = {parkings.id:{"event":"car license plate "+str(car_number) +" left","ts_in":"",
                                     "ts_out": self.str_current_frame_time}}
@@ -263,6 +270,7 @@ class car_tracker(QThread):
                         cv2.circle(frame, tuple(parkings.centroid), 3, (0,255,0) , -1)
                     elif not parkings.parking_status:
                         cv2.circle(frame, tuple(parkings.centroid), 3, (0,25,255) , -1)
+            
             
             image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format.Format_BGR888)
             self.updateFrame(image)

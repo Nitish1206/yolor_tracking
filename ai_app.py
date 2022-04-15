@@ -7,7 +7,7 @@ import sys
 import cv2
 import os
 from car_utils.parkings import Parking
-from car_utils.cars import car
+from car_utils.cars import Car
 from random import randint
 import torch
 # from video_thread import videoThread
@@ -244,7 +244,7 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
     def save_cars(self):
 
         for ids in self.all_cars["car id"]:
-            car_obj=car()
+            car_obj=Car()
             car_obj.id=int(ids)
             car_obj.permit_type=self.all_cars["permit type"][int(ids)-1].currentText()
             car_obj.number=self.all_cars["car number"][int(ids)-1]
@@ -351,7 +351,6 @@ class Window(QMainWindow, roi_window.Ui_MainWindow,processing_window.Ui_Form):
         self.processing_ui.detail_table.setWordWrap(True)
         self.processing_ui.detail_table.resizeColumnsToContents()
         self.processing_ui.detail_table.resizeRowsToContents()
-        # self.processing_ui.detail_table.
 
 
 def main():

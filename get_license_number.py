@@ -18,11 +18,9 @@ def get_result_api(image):
         return plate
     else:
         return None
-        # types = result['results'][0]['vehicle']['type']
-        # time = result.get('timestamp')
-        # client.connect('127.0.0.1', 1883)
-        # temp_data = {"status": 1, "msg": types+"  "+plate+"  "+datetime.now().strftime("%Y-%m-%d %H:%M")}
-        # client.publish('parking/' + str(index), json.dumps(temp_data))
-        # with open('result.txt', 'a+') as fp:
-        #     fp.write("Parking-->"+str(index)+"-->"+types+"-->  "+plate+"   "+datetime.now().strftime("%Y-%m-%d %H:%M")+"\n")
-
+        
+if __name__ == "__main__":
+    image_path=r"N:\Projects\yolor_tracking\videos\images\vlcsnap-2022-04-05-18h36m45s585 (3).png"
+    image=cv2.imread(image_path)
+    plate_number=get_result_api(image)
+    print(plate_number)

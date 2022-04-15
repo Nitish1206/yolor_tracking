@@ -14,6 +14,7 @@ class Parking:
         self.xs=[]
         self.ys=[]
         self.car_number=[]
+        self.current_car_number=None
         # parkings line segment
 
         self.top_line=None

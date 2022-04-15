@@ -36,4 +36,6 @@ PREMIMUM_PARKING_NO_PERMIT_FINE_TIME_END_dt=convert_seconds_to_time(PREMIMUM_PAR
 
 FRONT_CAMERA=True
 TOP_CAMERA=False
-DRAW_STATUS=False
+DRAW_STATUS=True
+
+PERMIT_TYPES=["Red Zone","Yellow Zone","Residential","villa","Disabled","Premium","Standard"]

@@ -1,5 +1,5 @@
 
-class car():
+class Car():
     def __init__(self) -> None:
         self.id=None
         self.centroid=None
