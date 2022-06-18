@@ -1,6 +1,6 @@
 import datetime
 from pickle import TRUE
-
+import os
 
 seconds_=3600
 def convert_seconds_to_time(user_time_):
@@ -38,4 +38,12 @@ FRONT_CAMERA=True
 TOP_CAMERA=False
 DRAW_STATUS=True
 
-PERMIT_TYPES=["Red Zone","Yellow Zone","Residential","villa","Disabled","Premium","Standard"]
+PERMIT_TYPES=["Residential","villa","Disabled","Premium","Standard"]
+
+DAY_LIST=["workday","offday"]
+STARTTIMES=[str(0),str(8),str(21)]
+HOURDATA=[str(x) for x in range(0,24)]
+MINUTESDATA=[str(x) for x in range(0,60)]
+
+cwd=os.getcwd()
+CONFIG_PATH = cwd + os.sep+"application"+os.sep+"configuration"

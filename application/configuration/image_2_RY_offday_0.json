@@ -1,0 +1,1 @@
+{"image_path": "N:/Projects/yolor_tracking/videos/images/image.jpg", "parking_properties": {"parking id": [1, 2], "parking cordindate": [[[337, 347], [412, 319], [533, 314], [504, 341]], [[507, 341], [659, 332], [645, 313], [535, 315]]], "parking type": ["Red Zone", "Yellow Zone"]}, "day": "offday", "starttime": "0", "hour": "0", "minute": "3"}
